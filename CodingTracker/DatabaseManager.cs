@@ -61,7 +61,7 @@ namespace CodingTracker
                         Update();
                         break;
                     case "4":
-                        //Delete();
+                        Delete();
                         break;
                     default:
                         Console.Clear();
@@ -297,6 +297,84 @@ namespace CodingTracker
                     {
                         Console.Clear();
                         Console.WriteLine("\nThe record has been successfully updated!");
+                    }
+
+                    connection.Close();
+                }
+            }
+            else
+            {
+                Console.Clear();
+                GetUserInput();
+            }
+        }
+
+        static void Delete()
+        {
+            if (GetNumberOfRecords() == 0)
+            {
+                Console.Clear();
+                Console.WriteLine("\nThere are no records yet!");
+                GetUserInput();
+            }
+
+            Console.WriteLine("\nType 1 if you wish to delete only one record.");
+            Console.WriteLine("Type 2 if you wish to delete all of the records.");
+            Console.WriteLine("\nType 0 if you wish to return to the main menu.");
+
+            string deleteOption = Console.ReadLine();
+
+
+            if (deleteOption == "1")
+            {
+                GetRecords();
+                DateTime date = Validation.GetDateInput("\nWhich day would you like to delete? Type using the Format: (dd-MM-yyyy)");
+
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+
+                    var command = connection.CreateCommand();
+                    command.CommandText = $"DELETE FROM coding WHERE Date = \"{date:dd-MM-yyyy}\"";
+
+                    int rowCount = command.ExecuteNonQuery();
+
+                    if (rowCount == 0)
+                    {
+                        Console.Clear();
+                        Console.WriteLine($"\nThe record with Date: {date:dd-MM-yyyy} doesn't exist.");
+                        GetUserInput();
+                    }
+                    else
+                    {
+                        Console.Clear();
+                        Console.WriteLine("\nThe record has been successfully deleted!");
+                    }
+
+                    connection.Close();
+                }
+            }
+            else if (deleteOption == "2")
+            {
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+
+                    var command = connection.CreateCommand();
+                    command.CommandText = $"DELETE FROM coding";
+
+                    int rowCount = command.ExecuteNonQuery();
+
+                    if (rowCount == 0)
+                    {
+                        Console.Clear();
+                        Console.WriteLine("\nThere are no records yet");
+                        GetUserInput();
+                    }
+                    else
+                    {
+                        Console.Clear();
+                        Console.WriteLine("\nAll of the records have been successfully deleted!");
                     }
 
                     connection.Close();
