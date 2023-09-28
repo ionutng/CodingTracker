@@ -39,8 +39,8 @@ namespace CodingTracker
                 Console.WriteLine("Type 0 to Close Application.");
                 Console.WriteLine("Type 1 to View All Records.");
                 Console.WriteLine("Type 2 to Insert Record.");
-                Console.WriteLine("Type 3 to Delete Record.");
-                Console.WriteLine("Type 4 to Update Record.");
+                Console.WriteLine("Type 3 to Update Record.");
+                Console.WriteLine("Type 4 to Delete Record.");
                 Console.WriteLine("------------------------------");
 
                 string userInput = Console.ReadLine();
@@ -58,10 +58,10 @@ namespace CodingTracker
                         Insert();
                         break;
                     case "3":
-                        //Delete();
+                        Update();
                         break;
                     case "4":
-                        //Update();
+                        //Delete();
                         break;
                     default:
                         Console.Clear();
@@ -122,6 +122,13 @@ namespace CodingTracker
         {
             DateTime date = Validation.GetDateInput("Please insert the date: (Format: dd-MM-yyyy) or Type 0 to return to the main menu.");
 
+            if (CheckDuplicate(date))
+            {
+                Console.Clear();
+                Console.WriteLine($"A record with the date {date:dd-MM-yyyy} already exists!");
+                GetUserInput();
+            }
+
             DateTime startTime = Validation.GetTimeInput("Please insert the time when you started coding: (Format: HH:mm) or Type 0 to return to the main menu.");
 
             Validation.CheckDayAndTime(date, startTime);
@@ -130,7 +137,7 @@ namespace CodingTracker
             
             Validation.CheckDayAndTime(date, endTime);
 
-            TimeSpan duration = endTime - startTime;
+            TimeSpan duration = Validation.GetDuration(startTime, endTime);
 
             using (var connection = new SqliteConnection(connectionString))
             {
@@ -147,7 +154,294 @@ namespace CodingTracker
             Console.Clear();
             Console.WriteLine("The record has been inserted!");
         }
+
+        static void Update()
+        {
+            if (GetNumberOfRecords() == 0)
+            {
+                Console.Clear();
+                Console.WriteLine("\nThere are no records yet!");
+                GetUserInput();
+            }
+
+            Console.WriteLine("\nWhat would you like to update?");
+            Console.WriteLine("Type 1 for starting time");
+            Console.WriteLine("Type 2 for ending time");
+            Console.WriteLine("Type 3 for both");
+            Console.WriteLine("\nType 0 if you wish to return to the main menu.");
+
+            string updateChoice = Console.ReadLine();
+
+            if (updateChoice == "1")
+            {
+                GetRecords();
+                DateTime date = Validation.GetDateInput("\nType the date for the record that you would like to update. Type it in the Format: (dd-MM-yyyy)");
+
+                if (!DateExists(date))
+                {
+                    Console.Clear();
+                    Console.WriteLine($"\nThe record with Date: {date:dd-MM-yyyy} doesn't exist.");
+                    GetUserInput();
+                }
+
+                DateTime startTime = Validation.GetTimeInput("Please insert the new starting time: (Format: HH:mm) or Type 0 to return to the main menu.");
+
+                Validation.CheckDayAndTime(date, startTime);
+
+                TimeSpan duration = Validation.GetDuration(startTime, GetTime("EndTime", date));
+
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+
+                    var command = connection.CreateCommand();
+                    command.CommandText = $"UPDATE coding SET StartTime = \"{startTime:HH:mm}\", Duration = \"{duration}\" where Date = \"{date:dd-MM-yyyy}\"";
+
+                    int rowCount = command.ExecuteNonQuery();
+
+                    if (rowCount == 0)
+                    {
+                        Console.Clear();
+                        Console.WriteLine($"\nA record with the date {date:dd-MM-yyyy} doesn't exist.");
+                        GetUserInput();
+                    }
+                    else
+                    {
+                        Console.Clear();
+                        Console.WriteLine("\nThe record has been successfully updated!");
+                    }
+
+                    connection.Close();
+                }
+            }
+            else if (updateChoice == "2")
+            {
+                GetRecords();
+                DateTime date = Validation.GetDateInput("\nType the date for the record that you would like to update. Type it in the Format: (dd-MM-yyyy)");
+
+                if (!DateExists(date))
+                {
+                    Console.Clear();
+                    Console.WriteLine($"\nThe record with Date: {date:dd-MM-yyyy} doesn't exist.");
+                    GetUserInput();
+                }
+
+                DateTime endTime = Validation.GetTimeInput("Please insert the new ending time: (Format: HH:mm) or Type 0 to return to the main menu.");
+
+                Validation.CheckDayAndTime(date, endTime);
+
+                TimeSpan duration = Validation.GetDuration(GetTime("StartTime", date), endTime);
+
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+
+                    var command = connection.CreateCommand();
+                    command.CommandText = $"UPDATE coding SET EndTime = \"{endTime:HH:mm}\", Duration = \"{duration}\" where Date = \"{date:dd-MM-yyyy}\"";
+
+                    int rowCount = command.ExecuteNonQuery();
+
+                    if (rowCount == 0)
+                    {
+                        Console.Clear();
+                        Console.WriteLine($"\nA record with the date {date:dd-MM-yyyy} doesn't exist.");
+                        GetUserInput();
+                    }
+                    else
+                    {
+                        Console.Clear();
+                        Console.WriteLine("\nThe record has been successfully updated!");
+                    }
+
+                    connection.Close();
+                }
+            }
+            else if (updateChoice == "3")
+            {
+                GetRecords();
+                DateTime date = Validation.GetDateInput("\nType the date for the record that you would like to update. Type it in the Format: (dd-MM-yyyy)");
+                
+                if (!DateExists(date))
+                {
+                    Console.Clear();
+                    Console.WriteLine($"\nThe record with Date: {date:dd-MM-yyyy} doesn't exist.");
+                    GetUserInput();
+                }
+
+                DateTime startTime = Validation.GetTimeInput("Please insert the new starting time: (Format: HH:mm) or Type 0 to return to the main menu.");
+
+                Validation.CheckDayAndTime(date, startTime);
+
+                DateTime endTime = Validation.GetTimeInput("Please insert the new ending time: (Format: HH:mm) or Type 0 to return to the main menu.");
+
+                Validation.CheckDayAndTime(date, startTime);
+
+                TimeSpan duration = Validation.GetDuration(startTime, endTime);
+
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+
+                    var command = connection.CreateCommand();
+                    command.CommandText = $"UPDATE coding SET StartTime = \"{startTime:HH:mm}\", EndTime = \"{endTime:HH:mm}\", Duration = \"{duration}\" where Date = \"{date:dd-MM-yyyy}\"";
+
+                    int rowCount = command.ExecuteNonQuery();
+
+                    if (rowCount == 0)
+                    {
+                        Console.Clear();
+                        Console.WriteLine($"\nA record with the date {date:dd-MM-yyyy} doesn't exist.");
+                        GetUserInput();
+                    }
+                    else
+                    {
+                        Console.Clear();
+                        Console.WriteLine("\nThe record has been successfully updated!");
+                    }
+
+                    connection.Close();
+                }
+            }
+            else
+            {
+                Console.Clear();
+                GetUserInput();
+            }
+        }
+
+        static int GetNumberOfRecords()
+        {
+            using (var connection = new SqliteConnection(connectionString))
+            {
+                connection.Open();
+
+                var command = connection.CreateCommand();
+                command.CommandText = $"SELECT Date, StartTime, EndTime, Duration FROM coding";
+
+                List<Coding> tableData = new();
+
+                SqliteDataReader reader = command.ExecuteReader();
+
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        tableData.Add(new Coding
+                        {
+                            Date = DateTime.ParseExact(reader.GetString(0), "dd-MM-yyyy", new CultureInfo("en-US")),
+                            StartTime = DateTime.ParseExact(reader.GetString(1), "HH:mm", new CultureInfo("en-US")),
+                            EndTime = DateTime.ParseExact(reader.GetString(2), "HH:mm", new CultureInfo("en-US")),
+                            Duration = TimeSpan.Parse(reader.GetString(3))
+                        });
+                    }
+                }
+
+                connection.Close();
+
+                return tableData.Count;
+            }
+        }
+
+        static bool DateExists(DateTime date)
+        {
+            bool dateFound = false;
+
+            using (var connection = new SqliteConnection(connectionString))
+            {
+                connection.Open();
+
+                var command = connection.CreateCommand();
+                command.CommandText = $"SELECT Date, StartTime, EndTime, Duration FROM coding";
+
+                List<Coding> tableData = new();
+
+                SqliteDataReader reader = command.ExecuteReader();
+
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        tableData.Add(new Coding
+                        {
+                            Date = DateTime.ParseExact(reader.GetString(0), "dd-MM-yyyy", new CultureInfo("en-US")),
+                            StartTime = DateTime.ParseExact(reader.GetString(1), "HH:mm", new CultureInfo("en-US")),
+                            EndTime = DateTime.ParseExact(reader.GetString(2), "HH:mm", new CultureInfo("en-US")),
+                            Duration = TimeSpan.Parse(reader.GetString(3))
+                        });
+                    }
+                }
+
+                connection.Close();
+
+                foreach (var data in tableData)
+                    if (data.Date.ToString("dd-MM-yyyy") == date.ToString("dd-MM-yyyy"))
+                        dateFound = true;
+
+                return dateFound;
+            }
+        }
+
+        static bool CheckDuplicate(DateTime date)
+        {
+            using (var connection = new SqliteConnection(connectionString))
+            {
+                connection.Open();
+
+                var command = connection.CreateCommand();
+                command.CommandText = $"SELECT Date, StartTime, EndTime, Duration FROM coding";
+
+                List<Coding> tableData = new();
+
+                SqliteDataReader reader = command.ExecuteReader();
+
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        tableData.Add(new Coding
+                        {
+                            Date = DateTime.ParseExact(reader.GetString(0), "dd-MM-yyyy", new CultureInfo("en-US")),
+                            StartTime = DateTime.ParseExact(reader.GetString(1), "HH:mm", new CultureInfo("en-US")),
+                            EndTime = DateTime.ParseExact(reader.GetString(2), "HH:mm", new CultureInfo("en-US")),
+                            Duration = TimeSpan.Parse(reader.GetString(3))
+                        });
+                    }
+                }
+
+                connection.Close();
+
+                foreach (var data in tableData)
+                    if (data.Date.ToString("dd-MM-yyyy") == date.ToString("dd-MM-yyyy"))
+                        return true;
+
+                return false;
+            }
+        }
+
+        static DateTime GetTime(string firstTime, DateTime date)
+        {
+            DateTime time = DateTime.MinValue;
+
+            using (var connection = new SqliteConnection(connectionString))
+            {
+                connection.Open();
+
+                var command = connection.CreateCommand();
+                command.CommandText = $"SELECT {firstTime} FROM coding WHERE Date = \"{date:dd-MM-yyyy}\"";
+
+
+                SqliteDataReader reader = command.ExecuteReader();
+
+                if (reader.Read())
+                    time = DateTime.ParseExact(reader.GetString(0), "HH:mm", new CultureInfo("en-US"));
+
+                connection.Close();
+
+                return time;
+            }
+        }
     }
+
     internal class Coding
     {
         internal DateTime Date { get; set; }

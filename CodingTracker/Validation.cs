@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using Microsoft.Data.Sqlite;
+using System.Globalization;
 
 namespace CodingTracker
 {
@@ -70,6 +71,24 @@ namespace CodingTracker
                 Console.WriteLine("You can't input a future minute!");
                 DatabaseManager.GetUserInput();
             }
+        }
+
+        internal static TimeSpan GetDuration(DateTime startTime, DateTime endTime)
+        {
+            TimeSpan duration = TimeSpan.Zero;
+
+            if (endTime.TimeOfDay.TotalHours > startTime.TimeOfDay.TotalHours)
+            {
+                duration = endTime - startTime;
+            }
+            else
+            {
+                Console.Clear();
+                Console.WriteLine($"You can't input a starting time higher than an ending time!");
+                DatabaseManager.GetUserInput();
+            }
+
+            return duration;
         }
     }
 }
