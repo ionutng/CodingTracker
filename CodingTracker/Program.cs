@@ -1,9 +1,17 @@
-﻿using System.Configuration;
-using System.Collections.Specialized;
+﻿using CodingTracker;
+using System.Configuration;
 
-// Read all the keys from the config file
-NameValueCollection sAll;
-sAll = ConfigurationManager.AppSettings;
+// Storing the database path in a string and checking to see if the database exists
+string dbPath = ConfigurationManager.AppSettings.Get("DatabasePath");
+bool dbExists = File.Exists(dbPath);
 
-foreach (string s in sAll.AllKeys)
-    Console.WriteLine("Key: " + s + " Value: " + sAll.Get(s));
+// Create the database if it doesn't exist
+if (!dbExists)
+{
+    DatabaseManager.CreateDatabase();
+    DatabaseManager.GetUserInput();
+}
+else
+{
+    DatabaseManager.GetUserInput();
+}
