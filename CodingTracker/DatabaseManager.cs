@@ -1,5 +1,7 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using ConsoleTableExt;
+using Microsoft.Data.Sqlite;
 using System.Configuration;
+using System.Data;
 using System.Globalization;
 
 namespace CodingTracker
@@ -80,41 +82,53 @@ namespace CodingTracker
                 connection.Open();
 
                 var command = connection.CreateCommand();
-                command.CommandText = $"SELECT Date, StartTime, EndTime, Duration FROM coding ORDER BY Date ASC";
+                command.CommandText = $"SELECT Date, StartTime, EndTime, Duration FROM coding ORDER BY Date ASC, StartTime ASC";
 
-                List<Coding> tableData = new List<Coding>();
-
-                SqliteDataReader reader = command.ExecuteReader();
-
-                if (reader.HasRows)
-                {
-                    while (reader.Read())
-                    {
-                        tableData.Add(new Coding
-                        {
-                            Date = DateTime.ParseExact(reader.GetString(0), "dd-MM-yyyy", new CultureInfo("en-US")),
-                            StartTime = DateTime.ParseExact(reader.GetString(1),"HH:mm", new CultureInfo("en-US")),
-                            EndTime = DateTime.ParseExact(reader.GetString(2), "HH:mm", new CultureInfo("en-US")),
-                            Duration = TimeSpan.Parse(reader.GetString(3))
-                        });
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("\nThere are no records yet!");
-                }
+                var tableData = new DataTable();
+                tableData.Load(command.ExecuteReader());
 
                 connection.Close();
 
-                if (tableData.Count > 0)
-                    Console.WriteLine("\nThe records are:");
-
-                foreach (var data in tableData)
+                if (tableData.Rows.Count > 0)
                 {
-                    Console.WriteLine($"Date: {data.Date:dd-MM-yyyy}");
-                    Console.WriteLine($"Start Time: {data.StartTime:HH:mm} - End Time: {data.EndTime:HH:mm}");
-                    Console.WriteLine($"Duration: {data.Duration.Hours} hours, {data.Duration.Minutes} minutes\n");
+                    ConsoleTableBuilder
+                        .From(tableData)
+                        .WithTitle("RECORDS", ConsoleColor.Cyan, ConsoleColor.DarkGray)
+                        .WithColumn("Date", "Start Time", "End Time", "Duration")
+                        .WithTextAlignment(new Dictionary<int, TextAligntment>
+                        {
+                            {0, TextAligntment.Center },
+                            {1, TextAligntment.Center },
+                            {2, TextAligntment.Center },
+                            {3, TextAligntment.Center }
+                        })
+                        .WithCharMapDefinition(new Dictionary<CharMapPositions, char> {
+                            {CharMapPositions.BottomLeft, '=' },
+                            {CharMapPositions.BottomCenter, '=' },
+                            {CharMapPositions.BottomRight, '=' },
+                            {CharMapPositions.BorderTop, '=' },
+                            {CharMapPositions.BorderBottom, '=' },
+                            {CharMapPositions.BorderLeft, '|' },
+                            {CharMapPositions.BorderRight, '|' },
+                            {CharMapPositions.DividerY, '|' },
+                        })
+                        .WithHeaderCharMapDefinition(new Dictionary<HeaderCharMapPositions, char> {
+                            {HeaderCharMapPositions.TopLeft, '=' },
+                            {HeaderCharMapPositions.TopCenter, '=' },
+                            {HeaderCharMapPositions.TopRight, '=' },
+                            {HeaderCharMapPositions.BottomLeft, '|' },
+                            {HeaderCharMapPositions.BottomCenter, '-' },
+                            {HeaderCharMapPositions.BottomRight, '|' },
+                            {HeaderCharMapPositions.Divider, '|' },
+                            {HeaderCharMapPositions.BorderTop, '=' },
+                            {HeaderCharMapPositions.BorderBottom, '-' },
+                            {HeaderCharMapPositions.BorderLeft, '|' },
+                            {HeaderCharMapPositions.BorderRight, '|' },
+                        })
+                        .ExportAndWriteLine();
                 }
+                else
+                    Console.WriteLine("\nThere are no records yet!");
             }
         }
 
@@ -122,19 +136,27 @@ namespace CodingTracker
         {
             DateTime date = Validation.GetDateInput("Please insert the date: (Format: dd-MM-yyyy) or Type 0 to return to the main menu.");
 
-            if (CheckDuplicate(date))
-            {
-                Console.Clear();
-                Console.WriteLine($"A record with the date {date:dd-MM-yyyy} already exists!");
-                GetUserInput();
-            }
 
             DateTime startTime = Validation.GetTimeInput("Please insert the time when you started coding: (Format: HH:mm) or Type 0 to return to the main menu.");
+
+            if (CheckDuplicate(date, startTime))
+            {
+                Console.Clear();
+                Console.WriteLine($"A record with the date {date:dd-MM-yyyy}, studying at {startTime:HH:mm} already exists!");
+                GetUserInput();
+            }
 
             Validation.CheckDayAndTime(date, startTime);
 
             DateTime endTime = Validation.GetTimeInput("Please insert the time when you finished coding: (Format: HH:mm) or Type 0 to return to the main menu.");
-            
+
+            if (CheckDuplicate(date, endTime))
+            {
+                Console.Clear();
+                Console.WriteLine($"A record with the date {date:dd-MM-yyyy}, studying at {endTime:HH:mm} already exists!");
+                GetUserInput();
+            }
+
             Validation.CheckDayAndTime(date, endTime);
 
             TimeSpan duration = Validation.GetDuration(startTime, endTime);
@@ -459,14 +481,14 @@ namespace CodingTracker
             }
         }
 
-        static bool CheckDuplicate(DateTime date)
+        static bool CheckDuplicate(DateTime date, DateTime time)
         {
             using (var connection = new SqliteConnection(connectionString))
             {
                 connection.Open();
 
                 var command = connection.CreateCommand();
-                command.CommandText = $"SELECT Date, StartTime, EndTime, Duration FROM coding";
+                command.CommandText = $"SELECT Date, StartTime, EndTime, Duration FROM coding WHERE Date = \"{date:dd-MM-yyyy}\"";
 
                 List<Coding> tableData = new();
 
@@ -489,8 +511,22 @@ namespace CodingTracker
                 connection.Close();
 
                 foreach (var data in tableData)
-                    if (data.Date.ToString("dd-MM-yyyy") == date.ToString("dd-MM-yyyy"))
-                        return true;
+                {
+                    if (data.StartTime.Hour == data.EndTime.Hour)
+                    {
+                        if (time.Hour == data.StartTime.Hour && time.Minute >= data.StartTime.Minute && time.Minute <= data.EndTime.Minute)
+                            return true;
+                    }
+                    else
+                    {
+                        if (time.Hour > data.StartTime.Hour && time.Hour < data.EndTime.Hour)
+                            return true;
+                        if (time.Hour == data.StartTime.Hour && time.Minute >= data.StartTime.Minute)
+                            return true;
+                        if (time.Hour == data.EndTime.Hour && time.Minute <= data.EndTime.Minute)
+                            return true;
+                    }
+                }
 
                 return false;
             }

@@ -64,13 +64,6 @@ namespace CodingTracker
                 Console.WriteLine("You can't input a future hour!");
                 DatabaseManager.GetUserInput();
             }
-
-            if (hour.Minute > DateTime.Now.Minute && date.ToString("dd-MM-yyyy") == DateTime.Now.ToString("dd-MM-yyyy"))
-            {
-                Console.Clear();
-                Console.WriteLine("You can't input a future minute!");
-                DatabaseManager.GetUserInput();
-            }
         }
 
         internal static TimeSpan GetDuration(DateTime startTime, DateTime endTime)
