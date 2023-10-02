@@ -134,47 +134,122 @@ namespace CodingTracker
 
         static void Insert()
         {
-            DateTime date = Validation.GetDateInput("Please insert the date: (Format: dd-MM-yyyy) or Type 0 to return to the main menu.");
+            Console.WriteLine("\nHow would you like to insert a record?");
+            Console.WriteLine("\nType 1 to insert a record manually.");
+            Console.WriteLine("Type 2 to track your time and insert the record automatically.");
+            Console.WriteLine("\nType 0 to return to the main menu.");
 
+            string insertChoice = Console.ReadLine();
 
-            DateTime startTime = Validation.GetTimeInput("Please insert the time when you started coding: (Format: HH:mm) or Type 0 to return to the main menu.");
+            if (insertChoice == "1")
+            {
+                DateTime date = Validation.GetDateInput("Please insert the date: (Format: dd-MM-yyyy) or Type 0 to return to the main menu.");
 
-            if (CheckDuplicate(date, startTime))
+                DateTime startTime = Validation.GetTimeInput("Please insert the time when you started coding: (Format: HH:mm) or Type 0 to return to the main menu.");
+
+                if (CheckDuplicate(date, startTime))
+                {
+                    Console.Clear();
+                    Console.WriteLine($"A record with the date {date:dd-MM-yyyy}, studying at {startTime:HH:mm} already exists!");
+                    GetUserInput();
+                }
+
+                Validation.CheckDayAndTime(date, startTime);
+
+                DateTime endTime = Validation.GetTimeInput("Please insert the time when you finished coding: (Format: HH:mm) or Type 0 to return to the main menu.");
+
+                if (CheckDuplicate(date, endTime))
+                {
+                    Console.Clear();
+                    Console.WriteLine($"A record with the date {date:dd-MM-yyyy}, studying at {endTime:HH:mm} already exists!");
+                    GetUserInput();
+                }
+
+                Validation.CheckDayAndTime(date, endTime);
+
+                TimeSpan duration = Validation.GetDuration(startTime, endTime);
+
+                using (var connection = new SqliteConnection(connectionString))
+                {
+                    connection.Open();
+
+                    var command = connection.CreateCommand();
+                    command.CommandText = $"INSERT INTO coding (Date, StartTime, EndTime, Duration) VALUES (\"{date:dd-MM-yyyy}\", \"{startTime:HH:mm}\", \"{endTime:HH:mm}\", \"{duration}\")";
+
+                    command.ExecuteNonQuery();
+
+                    connection.Close();
+                }
+
+                Console.Clear();
+                Console.WriteLine("The record has been inserted!");
+            }
+            else if (insertChoice == "2")
+            {
+                DateTime date = DateTime.Now;
+
+                Console.WriteLine("\nThe time has started! Currently tracking your time!");
+                DateTime.TryParseExact(date.ToString("HH:mm"), "HH:mm", new CultureInfo("en-US"), DateTimeStyles.None, out DateTime startTime);
+
+                if (CheckDuplicate(date, startTime))
+                {
+                    Console.Clear();
+                    Console.WriteLine($"A record with the date {date:dd-MM-yyyy}, studying at {startTime:HH:mm} already exists!");
+                    GetUserInput();
+                }
+
+                Console.WriteLine("\nType 1 to end tracking the time and insert the record.");
+                Console.WriteLine("Type 0 to cancel tracking the time and return to the main menu.");
+
+                string choice = Console.ReadLine();
+
+                if (choice == "1")
+                {
+                    Console.WriteLine("Stopped tracking your time!");
+                    DateTime.TryParseExact(DateTime.Now.ToString("HH:mm"), "HH:mm", new CultureInfo("en-US"), DateTimeStyles.None, out DateTime endTime);
+
+                    if (CheckDuplicate(date, startTime))
+                    {
+                        Console.Clear();
+                        Console.WriteLine($"A record with the date {date:dd-MM-yyyy}, studying at {startTime:HH:mm} already exists!");
+                        GetUserInput();
+                    }
+
+                    if (startTime.ToString("HH:mm") == endTime.ToString("HH:mm"))
+                    {
+                        Console.Clear();
+                        Console.WriteLine("You can't insert a record that has the same ending time as the starting time.");
+                        GetUserInput();
+                    }
+
+                    TimeSpan duration = Validation.GetDuration(startTime, endTime);
+
+                    using (var connection = new SqliteConnection(connectionString))
+                    {
+                        connection.Open();
+
+                        var command = connection.CreateCommand();
+                        command.CommandText = $"INSERT INTO coding (Date, StartTime, EndTime, Duration) VALUES (\"{date:dd-MM-yyyy}\", \"{startTime:HH:mm}\", \"{endTime:HH:mm}\", \"{duration}\")";
+
+                        command.ExecuteNonQuery();
+
+                        connection.Close();
+                    }
+
+                    Console.Clear();
+                    Console.WriteLine("The record has been inserted!");
+                }
+                else
+                {
+                    Console.Clear();
+                    GetUserInput();
+                }
+            }
+            else
             {
                 Console.Clear();
-                Console.WriteLine($"A record with the date {date:dd-MM-yyyy}, studying at {startTime:HH:mm} already exists!");
                 GetUserInput();
             }
-
-            Validation.CheckDayAndTime(date, startTime);
-
-            DateTime endTime = Validation.GetTimeInput("Please insert the time when you finished coding: (Format: HH:mm) or Type 0 to return to the main menu.");
-
-            if (CheckDuplicate(date, endTime))
-            {
-                Console.Clear();
-                Console.WriteLine($"A record with the date {date:dd-MM-yyyy}, studying at {endTime:HH:mm} already exists!");
-                GetUserInput();
-            }
-
-            Validation.CheckDayAndTime(date, endTime);
-
-            TimeSpan duration = Validation.GetDuration(startTime, endTime);
-
-            using (var connection = new SqliteConnection(connectionString))
-            {
-                connection.Open();
-
-                var command = connection.CreateCommand();
-                command.CommandText = $"INSERT INTO coding (Date, StartTime, EndTime, Duration) VALUES (\"{date:dd-MM-yyyy}\", \"{startTime:HH:mm}\", \"{endTime:HH:mm}\", \"{duration}\")";
-
-                command.ExecuteNonQuery();
-
-                connection.Close();
-            }
-
-            Console.Clear();
-            Console.WriteLine("The record has been inserted!");
         }
 
         static void Update()
@@ -206,6 +281,8 @@ namespace CodingTracker
                     GetUserInput();
                 }
 
+                DateTime oldStartTime = Validation.GetTimeInput("Type the starting time that you want to be changed. Format: (HH:mm)");
+
                 DateTime startTime = Validation.GetTimeInput("Please insert the new starting time: (Format: HH:mm) or Type 0 to return to the main menu.");
 
                 Validation.CheckDayAndTime(date, startTime);
@@ -217,7 +294,7 @@ namespace CodingTracker
                     connection.Open();
 
                     var command = connection.CreateCommand();
-                    command.CommandText = $"UPDATE coding SET StartTime = \"{startTime:HH:mm}\", Duration = \"{duration}\" where Date = \"{date:dd-MM-yyyy}\"";
+                    command.CommandText = $"UPDATE coding SET StartTime = \"{startTime:HH:mm}\", Duration = \"{duration}\" WHERE Date = \"{date:dd-MM-yyyy}\" AND StartTime = \"{oldStartTime:HH:mm}\"";
 
                     int rowCount = command.ExecuteNonQuery();
 
@@ -248,6 +325,8 @@ namespace CodingTracker
                     GetUserInput();
                 }
 
+                DateTime oldEndTime = Validation.GetTimeInput("Type the ending time that you want to be changed. Format: (HH:mm)");
+
                 DateTime endTime = Validation.GetTimeInput("Please insert the new ending time: (Format: HH:mm) or Type 0 to return to the main menu.");
 
                 Validation.CheckDayAndTime(date, endTime);
@@ -259,7 +338,7 @@ namespace CodingTracker
                     connection.Open();
 
                     var command = connection.CreateCommand();
-                    command.CommandText = $"UPDATE coding SET EndTime = \"{endTime:HH:mm}\", Duration = \"{duration}\" where Date = \"{date:dd-MM-yyyy}\"";
+                    command.CommandText = $"UPDATE coding SET EndTime = \"{endTime:HH:mm}\", Duration = \"{duration}\" where Date = \"{date:dd-MM-yyyy}\" AND EndTime = \"{oldEndTime:HH:mm}\"";
 
                     int rowCount = command.ExecuteNonQuery();
 
@@ -290,6 +369,8 @@ namespace CodingTracker
                     GetUserInput();
                 }
 
+                DateTime oldStartTime = Validation.GetTimeInput("Type the starting time for the date that you want to be changed. Format: (HH:mm)");
+
                 DateTime startTime = Validation.GetTimeInput("Please insert the new starting time: (Format: HH:mm) or Type 0 to return to the main menu.");
 
                 Validation.CheckDayAndTime(date, startTime);
@@ -305,7 +386,7 @@ namespace CodingTracker
                     connection.Open();
 
                     var command = connection.CreateCommand();
-                    command.CommandText = $"UPDATE coding SET StartTime = \"{startTime:HH:mm}\", EndTime = \"{endTime:HH:mm}\", Duration = \"{duration}\" where Date = \"{date:dd-MM-yyyy}\"";
+                    command.CommandText = $"UPDATE coding SET StartTime = \"{startTime:HH:mm}\", EndTime = \"{endTime:HH:mm}\", Duration = \"{duration}\" where Date = \"{date:dd-MM-yyyy}\" AND StartTime = \"{oldStartTime:HH:mm}\"";
 
                     int rowCount = command.ExecuteNonQuery();
 
@@ -351,20 +432,21 @@ namespace CodingTracker
             {
                 GetRecords();
                 DateTime date = Validation.GetDateInput("\nWhich day would you like to delete? Type using the Format: (dd-MM-yyyy)");
+                DateTime startTime = Validation.GetTimeInput("Type the starting time for the day that you would like to be deleted. Format: (HH:mm)");
 
                 using (var connection = new SqliteConnection(connectionString))
                 {
                     connection.Open();
 
                     var command = connection.CreateCommand();
-                    command.CommandText = $"DELETE FROM coding WHERE Date = \"{date:dd-MM-yyyy}\"";
+                    command.CommandText = $"DELETE FROM coding WHERE Date = \"{date:dd-MM-yyyy}\" AND StartTime = \"{startTime:HH:mm}\"";
 
                     int rowCount = command.ExecuteNonQuery();
 
                     if (rowCount == 0)
                     {
                         Console.Clear();
-                        Console.WriteLine($"\nThe record with Date: {date:dd-MM-yyyy} doesn't exist.");
+                        Console.WriteLine($"\nThe record with Date: {date:dd-MM-yyyy} and StartTime: {startTime:HH:mm} doesn't exist.");
                         GetUserInput();
                     }
                     else
